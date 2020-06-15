@@ -1,5 +1,10 @@
 const question = document.getElementById('question');
 const choices = Array.from(document.getElementsByClassName("choice-text"));
+const progressText = document.getElementById('progressText');
+var scoreText = document.getElementById('score');
+const progressBarFull = document.getElementById('progressBarFull');
+const loader = document.getElementById('loader');
+const game = document.getElementById('game');
 
 let currentQuestion = {};
 let acceptingAnswers = false;
@@ -7,47 +12,54 @@ let score = 0;
 let questionCounter = 0;
 let availableQuestions = [];
 
-let questions = [
-    {
-        question: "Inside which HTML element do we put the Javascript??",
-        choice1:  "<script>",
-        choice2:  "<javascript>",
-        choice3:  "<js>",
-        choice4:  "<scripting>",
-        answer: 1
-    },
+let questions = [];
 
-    {
-        question: "What is the correct syntax for referring to an external script called 'xxx.js'?",
-        choice1:   "<script href = 'xxx.js'>",
-        choice2:   "<script name = 'xxx.js'>",
-        choice3:   "<script src = 'xxx.js'>",
-        choice4:   "<script file = 'xxx.js'>",
-        answer: 3
-    }
-];
+const proxyurl = "https://cors-anywhere.herokuapp.com/";
+const url = "https://quizinternapi.herokuapp.com/questions";
 
+fetch(proxyurl + url)
+.then(res => {
+    return res.json();
+})
+.then(loadedQuestions => {
+    console.log(loadedQuestions);
+    questions = loadedQuestions;
 
-//constants
+    startGame();
+})
+.catch(()=> {
+    console.log("Can’t access " + url + " response. Blocked by browser?");
+});
+
 
 const CORRECT_BONUS = 10;
-const MAX_QUESTIONS = 2;
+const MAX_QUESTIONS = 8;
 
 startGame = () => {
     questionCounter = 0;
     score = 0;
     availableQuestions = [...questions];
     getNewQuestion();
+    
+    game.classList.remove("hidden");
+    loader.classList.add("hidden");
 };
 
 getNewQuestion = () => {
 
    if (availableQuestions.length === 0 || questionCounter >= MAX_QUESTIONS) {
       // go to the end page
-      return window.location.assign("/end.html");
+      localStorage.setItem("mostRecentScore", score);
+      return window.location.assign("end.html");
    }
 
     questionCounter++;
+    progressText.innerText = `Question${questionCounter}/${MAX_QUESTIONS}`;
+
+    //update the progress bar
+
+    progressBarFull.style.width = `${(questionCounter / MAX_QUESTIONS) * 100}%`;
+
     const questionIndex = Math.floor(Math.random() * availableQuestions.length);
     currentQuestion = availableQuestions[questionIndex];
     question.innerText = currentQuestion.question;
@@ -70,9 +82,13 @@ choices.forEach(choice => {
         const selectedChoice = e.target;
         const selectedAnswer = selectedChoice.dataset["number"];
 
-        const classToApply = 'incorrect' ;
+        var classToApply = 'incorrect' ;
         if (selectedAnswer == currentQuestion.answer){
             classToApply = 'correct';
+        }
+        
+        if (classToApply === 'correct'){
+            incrementScore(CORRECT_BONUS);
         }
 
         selectedChoice.parentElement.classList.add(classToApply);
@@ -84,4 +100,8 @@ choices.forEach(choice => {
     });
 });
 
-startGame();
+incrementScore = num => {
+    score += num;
+    scoreText.innerText = score;
+}
+
